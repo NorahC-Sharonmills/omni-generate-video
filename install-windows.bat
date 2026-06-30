@@ -97,39 +97,35 @@ pause
 exit /b 0
 
 :ensure_node
-where node.exe >nul 2>&1
+call :check_node
 if not errorlevel 1 (
-    node -e "process.exit(Number(process.versions.node.split('.')[0]) ^>= 22 ? 0 : 1)" >nul 2>&1
+    call :check_npm
     if not errorlevel 1 (
-        where npm.cmd >nul 2>&1
-        if not errorlevel 1 (
-            echo [OK] Node.js 22 or newer and npm are available.
-            exit /b 0
-        )
+        echo [OK] Node.js 22 or newer and npm are available.
+        exit /b 0
     )
 )
 
 echo [INSTALL] Node.js LTS 22 or newer...
 winget list --id "OpenJS.NodeJS.LTS" --exact --accept-source-agreements >nul 2>&1
-if not errorlevel 1 (
+if "%errorlevel%"=="0" (
     winget upgrade --id "OpenJS.NodeJS.LTS" --exact --silent --accept-package-agreements --accept-source-agreements
 ) else (
     winget install --id "OpenJS.NodeJS.LTS" --exact --silent --accept-package-agreements --accept-source-agreements
 )
+if not "%errorlevel%"=="0" (
+    echo [ERROR] Could not install or upgrade Node.js.
+    exit /b 1
+)
 call :refresh_path
 
-where node.exe >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Node.js was not found after installation.
-    exit /b 1
-)
-node -e "process.exit(Number(process.versions.node.split('.')[0]) ^>= 22 ? 0 : 1)" >nul 2>&1
+call :check_node
 if errorlevel 1 (
     echo [ERROR] This project requires Node.js 22 or newer.
-    node --version
+    node --version 2>nul
     exit /b 1
 )
-where npm.cmd >nul 2>&1
+call :check_npm
 if errorlevel 1 (
     echo [ERROR] npm was not found after installing Node.js.
     exit /b 1
@@ -137,15 +133,33 @@ if errorlevel 1 (
 echo [OK] Node.js and npm are available.
 exit /b 0
 
+:check_node
+where node.exe >nul 2>&1
+if errorlevel 1 exit /b 1
+set "NODE_MAJOR="
+for /f "tokens=1 delims=." %%V in ('node --version 2^>nul') do set "NODE_MAJOR=%%V"
+set "NODE_MAJOR=%NODE_MAJOR:v=%"
+if not defined NODE_MAJOR exit /b 1
+for /f "delims=0123456789" %%A in ("%NODE_MAJOR%") do exit /b 1
+if %NODE_MAJOR% LSS 22 exit /b 1
+exit /b 0
+
+:check_npm
+where npm.cmd >nul 2>&1
+if not errorlevel 1 exit /b 0
+where npm.exe >nul 2>&1
+if not errorlevel 1 exit /b 0
+exit /b 1
+
 :winget_install
 winget list --id "%~1" --exact --accept-source-agreements >nul 2>&1
-if not errorlevel 1 (
+if "%errorlevel%"=="0" (
     echo [OK] %~2 is already installed.
     exit /b 0
 )
 echo [INSTALL] %~2...
 winget install --id "%~1" --exact --silent --accept-package-agreements --accept-source-agreements
-if errorlevel 1 (
+if not "%errorlevel%"=="0" (
     echo [ERROR] Could not install %~2.
     exit /b 1
 )

@@ -1,4 +1,4 @@
-# Omni Generate Video
+  # Omni Generate Video
 
 Pipeline Node.js/TypeScript tạo video tin tức từ một `script.json` đã được kiểm tra. Mỗi scene dùng một template HyperFrames, OmniVoice tạo giọng đọc tiếng Việt, còn FFmpeg ghép audio, hiệu ứng âm thanh và video thành file hoàn chỉnh.
 
